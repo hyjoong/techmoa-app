@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:techmoa_app/data/bookmark.dart';
+import 'package:techmoa_app/data/bookmark_repository.dart';
 
 const _initialUrl = 'https://techmoa.dev';
 
@@ -17,6 +22,7 @@ class WebViewScreen extends StatefulWidget {
 class _WebViewScreenState extends State<WebViewScreen> {
   final GlobalKey _webViewKey = GlobalKey();
   final Connectivity _connectivity = Connectivity();
+  final BookmarkRepository _bookmarkRepository = BookmarkRepository.instance;
   InAppWebViewController? _controller;
   late final PullToRefreshController _pullToRefreshController;
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
@@ -111,6 +117,132 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
+  void _registerJavaScriptBridge(InAppWebViewController controller) {
+    controller.addJavaScriptHandler(
+      handlerName: 'saveBookmark',
+      callback: (args) async {
+        return await _handleSaveBookmark(args);
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'removeBookmark',
+      callback: (args) async {
+        return await _handleRemoveBookmark(args);
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'checkBookmark',
+      callback: (args) async {
+        return await _handleCheckBookmark(args);
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'shareArticle',
+      callback: (args) async {
+        return await _handleShareArticle(args);
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'getDeviceInfo',
+      callback: (args) async => _handleGetDeviceInfo(),
+    );
+  }
+
+  Future<Map<String, dynamic>> _handleSaveBookmark(List<dynamic> args) async {
+    try {
+      final payload = _parsePayload(args);
+      final bookmark = Bookmark.fromJson(payload);
+      final success = await _bookmarkRepository.saveBookmark(bookmark);
+      return {'success': success};
+    } catch (_) {
+      return {'success': false};
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleRemoveBookmark(List<dynamic> args) async {
+    try {
+      final payload = _parsePayload(args);
+      final id = payload['id']?.toString();
+      if (id == null || id.isEmpty) {
+        return {'success': false};
+      }
+      final success = await _bookmarkRepository.removeBookmark(id);
+      return {'success': success};
+    } catch (_) {
+      return {'success': false};
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleCheckBookmark(List<dynamic> args) async {
+    try {
+      final payload = _parsePayload(args);
+      final id = payload['id']?.toString();
+      if (id == null || id.isEmpty) {
+        return {'isBookmarked': false};
+      }
+      final bookmarked = await _bookmarkRepository.isBookmarked(id);
+      return {'isBookmarked': bookmarked};
+    } catch (_) {
+      return {'isBookmarked': false};
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleShareArticle(List<dynamic> args) async {
+    try {
+      final payload = _parsePayload(args);
+      final title = payload['title']?.toString();
+      final url = payload['url']?.toString();
+      if (url == null || url.isEmpty) {
+        return {'success': false};
+      }
+      final shareText = title != null && title.isNotEmpty
+          ? '$title\n$url'
+          : url;
+      await Share.share(shareText);
+      return {'success': true};
+    } catch (_) {
+      return {'success': false};
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleGetDeviceInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final os = Platform.operatingSystem;
+      final device = Platform.isIOS
+          ? 'ios'
+          : Platform.isAndroid
+          ? 'android'
+          : 'unknown';
+      return {'version': info.version, 'os': os, 'device': device};
+    } catch (_) {
+      return {
+        'version': 'unknown',
+        'os': Platform.operatingSystem,
+        'device': 'unknown',
+      };
+    }
+  }
+
+  Map<String, dynamic> _parsePayload(List<dynamic> args) {
+    if (args.isEmpty) return {};
+    final value = args.first;
+    if (value is Map) {
+      return value.map((key, value) => MapEntry(key.toString(), value));
+    }
+    if (value is String) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) {
+          return decoded.map((key, value) => MapEntry(key.toString(), value));
+        }
+      } catch (_) {
+        return {};
+      }
+    }
+    return {};
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,6 +275,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   pullToRefreshController: _pullToRefreshController,
                   onWebViewCreated: (controller) {
                     _controller = controller;
+                    _registerJavaScriptBridge(controller);
                   },
                   onProgressChanged: (controller, progress) {
                     if (!mounted) return;
