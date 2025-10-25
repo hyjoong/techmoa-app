@@ -55,6 +55,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -66,6 +68,32 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icons/techmoa_icon.png
+  adaptive_icon_background: "#2563eb"
+  adaptive_icon_foreground: assets/icons/techmoa_icon_foreground.png
+
+flutter_native_splash:
+  color: "#ffffff"
+  color_dark: "#1e293b"
+  image: assets/splash/techmoa_logo.png
+  image_dark: assets/splash/techmoa_logo_dark.png
+  branding: assets/splash/techmoa_branding_light.png
+  branding_dark: assets/splash/techmoa_branding_dark.png
+  android_gravity: center
+  ios_content_mode: center
+  web: false
+  branding_mode: bottom
+  android_12:
+    image: assets/splash/techmoa_logo.png
+    image_dark: assets/splash/techmoa_logo_dark.png
+    color: "#ffffff"
+    color_dark: "#1e293b"
+    icon_background_color: "#ffffff"
+    icon_background_color_dark: "#1e293b"
 
   # To add assets to your application, add an assets section, like this:
   # assets:
