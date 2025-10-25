@@ -1,4 +1,4 @@
-package com.example.techmoa
+package com.techmoa.app
 
 import io.flutter.embedding.android.FlutterActivity
 
