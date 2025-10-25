@@ -246,7 +246,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Techmoa'), centerTitle: true),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: Column(
         children: [
           SizedBox(
