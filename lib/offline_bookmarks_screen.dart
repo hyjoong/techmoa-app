@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:techmoa_app/data/bookmark.dart';
 import 'package:techmoa_app/data/bookmark_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -140,57 +141,58 @@ class _OfflineBookmarksScreenState extends State<OfflineBookmarksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('북마크')),
-      body: Column(
-        children: [
-          if (_isOffline) const _OfflineBanner(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search_rounded),
-                hintText: '제목 또는 작성자로 검색',
-                isDense: true,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (_isOffline) const _OfflineBanner(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintText: '제목 또는 작성자로 검색',
+                  isDense: true,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filtered.isEmpty
-                ? _EmptyState(onOpenWeb: _openWebHome)
-                : RefreshIndicator(
-                    onRefresh: _loadBookmarks,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      itemBuilder: (context, index) {
-                        final bookmark = _filtered[index];
-                        return Dismissible(
-                          key: ValueKey(bookmark.id),
-                          direction: DismissDirection.endToStart,
-                          background: _DismissibleBackground.neutral(context),
-                          secondaryBackground: _DismissibleBackground.delete(
-                            context,
-                          ),
-                          onDismissed: (_) => _removeBookmark(bookmark.id),
-                          child: _BookmarkTile(
-                            bookmark: bookmark,
-                            onTap: () => _showOpenSheet(bookmark),
-                          ),
-                        );
-                      },
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemCount: _filtered.length,
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filtered.isEmpty
+                  ? _EmptyState(onOpenWeb: _openWebHome)
+                  : RefreshIndicator(
+                      onRefresh: _loadBookmarks,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        itemBuilder: (context, index) {
+                          final bookmark = _filtered[index];
+                          return Dismissible(
+                            key: ValueKey(bookmark.id),
+                            direction: DismissDirection.endToStart,
+                            background: _DismissibleBackground.neutral(context),
+                            secondaryBackground: _DismissibleBackground.delete(
+                              context,
+                            ),
+                            onDismissed: (_) => _removeBookmark(bookmark.id),
+                            child: _BookmarkTile(
+                              bookmark: bookmark,
+                              onTap: () => _showOpenSheet(bookmark),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemCount: _filtered.length,
+                      ),
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -201,6 +203,35 @@ class _BookmarkTile extends StatelessWidget {
 
   final Bookmark bookmark;
   final VoidCallback onTap;
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      // 오늘인 경우
+      if (difference.inDays == 0) {
+        return '오늘 ${DateFormat('HH:mm').format(date)}';
+      }
+      // 어제인 경우
+      else if (difference.inDays == 1) {
+        return '어제 ${DateFormat('HH:mm').format(date)}';
+      }
+      // 일주일 이내
+      else if (difference.inDays < 7) {
+        return '${difference.inDays}일 전';
+      }
+      // 그 외
+      else {
+        return DateFormat('yyyy.MM.dd').format(date);
+      }
+    } catch (_) {
+      return dateStr;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -239,8 +270,10 @@ class _BookmarkTile extends StatelessWidget {
                       ),
                     const SizedBox(height: 4),
                     Text(
-                      bookmark.publishedAt ?? '',
-                      style: theme.textTheme.bodySmall,
+                      _formatDate(bookmark.publishedAt),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),

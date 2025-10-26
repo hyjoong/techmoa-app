@@ -246,56 +246,57 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const SizedBox.shrink()),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 3,
-            child: AnimatedOpacity(
-              opacity: !_isOffline && _progress < 1 ? 1 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: LinearProgressIndicator(value: _progress.clamp(0, 1)),
+      body: SafeArea(
+        child: Column(
+          children: [
+            SizedBox(
+              height: 3,
+              child: AnimatedOpacity(
+                opacity: !_isOffline && _progress < 1 ? 1 : 0,
+                duration: const Duration(milliseconds: 160),
+                child: LinearProgressIndicator(value: _progress.clamp(0, 1)),
+              ),
             ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                InAppWebView(
-                  key: _webViewKey,
-                  initialUrlRequest: URLRequest(url: WebUri(_initialUrl)),
-                  initialSettings: InAppWebViewSettings(
-                    javaScriptEnabled: true,
-                    cacheEnabled: true,
-                    supportZoom: false,
-                    builtInZoomControls: false,
-                    displayZoomControls: false,
-                    allowsBackForwardNavigationGestures: true,
-                    sharedCookiesEnabled: true,
-                  ),
-                  pullToRefreshController: _pullToRefreshController,
-                  onWebViewCreated: (controller) {
-                    _controller = controller;
-                    _registerJavaScriptBridge(controller);
-                  },
-                  onProgressChanged: (controller, progress) {
-                    if (!mounted) return;
-                    setState(() => _progress = progress / 100);
-                    if (progress == 100) {
+            Expanded(
+              child: Stack(
+                children: [
+                  InAppWebView(
+                    key: _webViewKey,
+                    initialUrlRequest: URLRequest(url: WebUri(_initialUrl)),
+                    initialSettings: InAppWebViewSettings(
+                      javaScriptEnabled: true,
+                      cacheEnabled: true,
+                      supportZoom: false,
+                      builtInZoomControls: false,
+                      displayZoomControls: false,
+                      allowsBackForwardNavigationGestures: true,
+                      sharedCookiesEnabled: true,
+                    ),
+                    pullToRefreshController: _pullToRefreshController,
+                    onWebViewCreated: (controller) {
+                      _controller = controller;
+                      _registerJavaScriptBridge(controller);
+                    },
+                    onProgressChanged: (controller, progress) {
+                      if (!mounted) return;
+                      setState(() => _progress = progress / 100);
+                      if (progress == 100) {
+                        _pullToRefreshController.endRefreshing();
+                      }
+                    },
+                    onLoadStop: (controller, url) async {
                       _pullToRefreshController.endRefreshing();
-                    }
-                  },
-                  onLoadStop: (controller, url) async {
-                    _pullToRefreshController.endRefreshing();
-                  },
-                  onLoadError: (controller, url, code, message) {
-                    _pullToRefreshController.endRefreshing();
-                  },
-                ),
-                if (_isOffline) _OfflineOverlay(onRetry: _handleRetry),
-              ],
+                    },
+                    onLoadError: (controller, url, code, message) {
+                      _pullToRefreshController.endRefreshing();
+                    },
+                  ),
+                  if (_isOffline) _OfflineOverlay(onRetry: _handleRetry),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
