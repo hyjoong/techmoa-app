@@ -31,8 +31,6 @@
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
@@ -46,6 +44,15 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UIStatusBarHidden</key>
+		<false/>
+		<!-- Firebase Cloud Messaging 백그라운드 모드 -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+			<string>fetch</string>
+		</array>
+		<!-- FirebaseAppDelegateProxyEnabled -->
+		<key>FirebaseAppDelegateProxyEnabled</key>
 		<false/>
 	</dict>
 </plist>
