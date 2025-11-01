@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:techmoa_app/data/bookmark.dart';
 import 'package:techmoa_app/data/bookmark_repository.dart';
+import 'package:techmoa_app/services/notification_service.dart';
 
 const _initialUrl = 'https://techmoa.dev';
 
@@ -23,9 +24,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
   final GlobalKey _webViewKey = GlobalKey();
   final Connectivity _connectivity = Connectivity();
   final BookmarkRepository _bookmarkRepository = BookmarkRepository.instance;
+  final NotificationService _notificationService = NotificationService.instance;
   InAppWebViewController? _controller;
   late final PullToRefreshController _pullToRefreshController;
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<Map<String, dynamic>>? _notificationSubscription;
 
   double _progress = 0;
   bool _isOffline = false;
@@ -71,11 +74,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
         unawaited(_reloadCurrentPage());
       }
     });
+
+    // 알림 탭 리스너 등록
+    _notificationSubscription = _notificationService.onNotificationTap.listen(
+      (data) => _handleNotificationUrl(data),
+    );
   }
 
   @override
   void dispose() {
     _connectivitySubscription?.cancel();
+    _notificationSubscription?.cancel();
     _pullToRefreshController.dispose();
     super.dispose();
   }
@@ -114,6 +123,27 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
     if (!offline) {
       await _reloadCurrentPage();
+    }
+  }
+
+  /// 알림에서 받은 URL로 이동
+  Future<void> _handleNotificationUrl(Map<String, dynamic> data) async {
+    final url = data['url'] as String?;
+    if (url == null || url.isEmpty) return;
+
+    print('📱 알림 URL로 이동: $url');
+
+    // 웹뷰 컨트롤러가 준비될 때까지 대기
+    if (_controller == null) {
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    try {
+      await _controller?.loadUrl(
+        urlRequest: URLRequest(url: WebUri(url)),
+      );
+    } catch (e) {
+      print('URL 로드 실패: $e');
     }
   }
 

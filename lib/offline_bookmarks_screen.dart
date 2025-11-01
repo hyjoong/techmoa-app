@@ -8,7 +8,9 @@ import 'package:techmoa_app/data/bookmark_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class OfflineBookmarksScreen extends StatefulWidget {
-  const OfflineBookmarksScreen({super.key});
+  const OfflineBookmarksScreen({super.key, this.onNavigateHome});
+
+  final VoidCallback? onNavigateHome;
 
   @override
   State<OfflineBookmarksScreen> createState() => _OfflineBookmarksScreenState();
@@ -127,14 +129,20 @@ class _OfflineBookmarksScreenState extends State<OfflineBookmarksScreen> {
     }
   }
 
-  Future<void> _openWebHome() async {
-    await _openBookmark(
-      Bookmark(
-        id: 'techmoa-home',
-        title: 'Techmoa',
-        externalUrl: 'https://techmoa.dev',
+  void _handleNavigateHome() {
+    if (widget.onNavigateHome != null) {
+      widget.onNavigateHome!.call();
+      return;
+    }
+    unawaited(
+      _openBookmark(
+        Bookmark(
+          id: 'techmoa-home',
+          title: 'Techmoa',
+          externalUrl: 'https://techmoa.dev',
+        ),
+        LaunchMode.externalApplication,
       ),
-      LaunchMode.externalApplication,
     );
   }
 
@@ -165,7 +173,7 @@ class _OfflineBookmarksScreenState extends State<OfflineBookmarksScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filtered.isEmpty
-                  ? _EmptyState(onOpenWeb: _openWebHome)
+                  ? _EmptyState(onNavigateHome: _handleNavigateHome)
                   : RefreshIndicator(
                       onRefresh: _loadBookmarks,
                       child: ListView.separated(
@@ -379,9 +387,9 @@ class _OpenOptionsSheet extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onOpenWeb});
+  const _EmptyState({required this.onNavigateHome});
 
-  final Future<void> Function() onOpenWeb;
+  final VoidCallback onNavigateHome;
 
   @override
   Widget build(BuildContext context) {
@@ -399,19 +407,19 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              '저장된 북마크가 없습니다.',
+              '저장된 북마크가 없어요.',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Techmoa 웹에서 관심 있는 글을 북마크로 저장해보세요.',
+              'Techmoa 홈에서 마음에 드는 글을 북마크로 추가해보세요.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: onOpenWeb,
-              icon: const Icon(Icons.open_in_browser_rounded),
-              label: const Text('웹으로 이동'),
+              onPressed: onNavigateHome,
+              icon: const Icon(Icons.home_rounded),
+              label: const Text('홈으로 이동'),
             ),
           ],
         ),
