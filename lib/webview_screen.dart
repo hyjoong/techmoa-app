@@ -273,59 +273,83 @@ class _WebViewScreenState extends State<WebViewScreen> {
     return {};
   }
 
+  Future<bool> _handleBackPress() async {
+    final controller = _controller;
+    if (controller == null) return true;
+
+    // WebView에서 뒤로 갈 수 있는지 확인
+    if (await controller.canGoBack()) {
+      await controller.goBack();
+      return false; // 앱 종료 방지
+    }
+
+    return true; // 뒤로 갈 곳이 없으면 앱 종료 허용
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(
-              height: 3,
-              child: AnimatedOpacity(
-                opacity: !_isOffline && _progress < 1 ? 1 : 0,
-                duration: const Duration(milliseconds: 160),
-                child: LinearProgressIndicator(value: _progress.clamp(0, 1)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldPop = await _handleBackPress();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              SizedBox(
+                height: 3,
+                child: AnimatedOpacity(
+                  opacity: !_isOffline && _progress < 1 ? 1 : 0,
+                  duration: const Duration(milliseconds: 160),
+                  child: LinearProgressIndicator(value: _progress.clamp(0, 1)),
+                ),
               ),
-            ),
-            Expanded(
-              child: Stack(
-                children: [
-                  InAppWebView(
-                    key: _webViewKey,
-                    initialUrlRequest: URLRequest(url: WebUri(_initialUrl)),
-                    initialSettings: InAppWebViewSettings(
-                      javaScriptEnabled: true,
-                      cacheEnabled: true,
-                      supportZoom: false,
-                      builtInZoomControls: false,
-                      displayZoomControls: false,
-                      allowsBackForwardNavigationGestures: true,
-                      sharedCookiesEnabled: true,
-                    ),
-                    pullToRefreshController: _pullToRefreshController,
-                    onWebViewCreated: (controller) {
-                      _controller = controller;
-                      _registerJavaScriptBridge(controller);
-                    },
-                    onProgressChanged: (controller, progress) {
-                      if (!mounted) return;
-                      setState(() => _progress = progress / 100);
-                      if (progress == 100) {
+              Expanded(
+                child: Stack(
+                  children: [
+                    InAppWebView(
+                      key: _webViewKey,
+                      initialUrlRequest: URLRequest(url: WebUri(_initialUrl)),
+                      initialSettings: InAppWebViewSettings(
+                        javaScriptEnabled: true,
+                        cacheEnabled: true,
+                        supportZoom: false,
+                        builtInZoomControls: false,
+                        displayZoomControls: false,
+                        allowsBackForwardNavigationGestures: true,
+                        sharedCookiesEnabled: true,
+                      ),
+                      pullToRefreshController: _pullToRefreshController,
+                      onWebViewCreated: (controller) {
+                        _controller = controller;
+                        _registerJavaScriptBridge(controller);
+                      },
+                      onProgressChanged: (controller, progress) {
+                        if (!mounted) return;
+                        setState(() => _progress = progress / 100);
+                        if (progress == 100) {
+                          _pullToRefreshController.endRefreshing();
+                        }
+                      },
+                      onLoadStop: (controller, url) async {
                         _pullToRefreshController.endRefreshing();
-                      }
-                    },
-                    onLoadStop: (controller, url) async {
-                      _pullToRefreshController.endRefreshing();
-                    },
-                    onLoadError: (controller, url, code, message) {
-                      _pullToRefreshController.endRefreshing();
-                    },
-                  ),
-                  if (_isOffline) _OfflineOverlay(onRetry: _handleRetry),
-                ],
+                      },
+                      onReceivedError: (controller, request, error) {
+                        _pullToRefreshController.endRefreshing();
+                      },
+                    ),
+                    if (_isOffline) _OfflineOverlay(onRetry: _handleRetry),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
