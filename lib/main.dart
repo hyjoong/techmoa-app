@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -166,24 +168,25 @@ class _SettingsContentState extends State<_SettingsContent> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       children: [
         const _SectionHeader(title: '일반'),
-        ListTile(
-          leading: const Icon(Icons.notifications_rounded),
-          title: const Text('알림 설정'),
-          subtitle: const Text('받고 싶은 블로그 알림을 선택하세요'),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const NotificationSettingsScreen(),
-              ),
-            );
-          },
-        ),
+        if (Platform.isIOS) ...[
+          ListTile(
+            leading: const Icon(Icons.notifications_rounded),
+            title: const Text('알림 설정'),
+            subtitle: const Text('받고 싶은 블로그 알림을 선택하세요'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
         ListTile(
           leading: const Icon(Icons.info_outline_rounded),
           title: const Text('앱 버전'),
