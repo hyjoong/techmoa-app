@@ -25,5 +25,5 @@
 ## 🌐 직접 사용해보세요!
 
 - 🔗 [웹에서 바로 체험하기](https://techmoa.dev)
-
+- 📲 [Google Play에서 설치하기](https://play.google.com/store/apps/details?id=com.techmoa.app)
 - 🍎 [App Store에서 설치하기](https://apps.apple.com/us/app/techmoa/id6754512319)
