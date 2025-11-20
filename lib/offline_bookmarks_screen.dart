@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:techmoa_app/data/bookmark.dart';
 import 'package:techmoa_app/data/bookmark_repository.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:techmoa_app/webview_screen.dart';
 
 class OfflineBookmarksScreen extends StatefulWidget {
   const OfflineBookmarksScreen({super.key, this.onNavigateHome});
@@ -106,27 +106,19 @@ class _OfflineBookmarksScreenState extends State<OfflineBookmarksScreen> {
     await _repository.removeBookmark(id);
   }
 
-  Future<void> _openBookmark(Bookmark bookmark, LaunchMode mode) async {
-    final uri = Uri.tryParse(bookmark.externalUrl);
-    if (uri == null) return;
-    final launched = await launchUrl(uri, mode: mode);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('링크를 열 수 없습니다: ${uri.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _showOpenSheet(Bookmark bookmark) async {
+  Future<void> _openBookmark(Bookmark bookmark) async {
     if (!mounted) return;
-    final mode = await showModalBottomSheet<LaunchMode>(
-      context: context,
-      showDragHandle: true,
-      builder: (_) => _OpenOptionsSheet(bookmark: bookmark),
+    if (bookmark.externalUrl.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WebViewScreen(
+          initialUrl: bookmark.externalUrl,
+          initialTitle: bookmark.title,
+          showAppBar: true,
+          enableNotificationNavigation: false,
+        ),
+      ),
     );
-    if (mode != null) {
-      await _openBookmark(bookmark, mode);
-    }
   }
 
   void _handleNavigateHome() {
@@ -141,7 +133,6 @@ class _OfflineBookmarksScreenState extends State<OfflineBookmarksScreen> {
           title: 'Techmoa',
           externalUrl: 'https://techmoa.dev',
         ),
-        LaunchMode.externalApplication,
       ),
     );
   }
@@ -190,7 +181,7 @@ class _OfflineBookmarksScreenState extends State<OfflineBookmarksScreen> {
                             onDismissed: (_) => _removeBookmark(bookmark.id),
                             child: _BookmarkTile(
                               bookmark: bookmark,
-                              onTap: () => _showOpenSheet(bookmark),
+                              onTap: () => _openBookmark(bookmark),
                             ),
                           );
                         },
@@ -339,48 +330,6 @@ class _PlaceholderThumbnail extends StatelessWidget {
       child: Icon(
         Icons.article_outlined,
         color: theme.colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-}
-
-class _OpenOptionsSheet extends StatelessWidget {
-  const _OpenOptionsSheet({required this.bookmark});
-
-  final Bookmark bookmark;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              bookmark.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.open_in_browser_rounded),
-              title: const Text('외부 브라우저로 열기'),
-              onTap: () =>
-                  Navigator.of(context).pop(LaunchMode.externalApplication),
-            ),
-            ListTile(
-              leading: const Icon(Icons.open_in_new_rounded),
-              title: const Text('인앱 웹뷰로 열기'),
-              onTap: () =>
-                  Navigator.of(context).pop(LaunchMode.inAppBrowserView),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
       ),
     );
   }
