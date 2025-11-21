@@ -14,7 +14,18 @@ import 'package:techmoa_app/services/notification_service.dart';
 const _initialUrl = 'https://techmoa.dev';
 
 class WebViewScreen extends StatefulWidget {
-  const WebViewScreen({super.key});
+  const WebViewScreen({
+    super.key,
+    this.initialUrl,
+    this.initialTitle,
+    this.showAppBar = false,
+    this.enableNotificationNavigation = true,
+  });
+
+  final String? initialUrl;
+  final String? initialTitle;
+  final bool showAppBar;
+  final bool enableNotificationNavigation;
 
   @override
   State<WebViewScreen> createState() => _WebViewScreenState();
@@ -32,6 +43,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
   double _progress = 0;
   bool _isOffline = false;
+  bool _allowNavigatorPop = true;
+
+  String get _startUrl =>
+      (widget.initialUrl != null && widget.initialUrl!.trim().isNotEmpty)
+          ? widget.initialUrl!.trim()
+          : _initialUrl;
+
+  String get _resolvedTitle =>
+      (widget.initialTitle != null && widget.initialTitle!.trim().isNotEmpty)
+          ? widget.initialTitle!.trim()
+          : 'Techmoa';
 
   @override
   void initState() {
@@ -52,7 +74,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
             await _controller?.loadUrl(urlRequest: URLRequest(url: currentUrl));
           } else {
             await _controller?.loadUrl(
-              urlRequest: URLRequest(url: WebUri(_initialUrl)),
+              urlRequest: URLRequest(url: WebUri(_startUrl)),
             );
           }
         }
@@ -75,10 +97,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
       }
     });
 
-    // 알림 탭 리스너 등록
-    _notificationSubscription = _notificationService.onNotificationTap.listen(
-      (data) => _handleNotificationUrl(data),
-    );
+    if (widget.enableNotificationNavigation) {
+      // 알림 탭 리스너 등록
+      _notificationSubscription = _notificationService.onNotificationTap.listen(
+        (data) => _handleNotificationUrl(data),
+      );
+    }
   }
 
   @override
@@ -107,7 +131,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     final currentUrl = await controller.getUrl();
     if (currentUrl == null) {
       await controller.loadUrl(
-        urlRequest: URLRequest(url: WebUri(_initialUrl)),
+        urlRequest: URLRequest(url: WebUri(_startUrl)),
       );
       return;
     }
@@ -273,61 +297,132 @@ class _WebViewScreenState extends State<WebViewScreen> {
     return {};
   }
 
+  Future<void> _syncNavigatorPopState() async {
+    final controller = _controller;
+    if (controller == null || !mounted) return;
+    final canGoBack = await controller.canGoBack();
+    final shouldAllowPop = !canGoBack;
+    if (_allowNavigatorPop != shouldAllowPop) {
+      setState(() => _allowNavigatorPop = shouldAllowPop);
+    }
+  }
+
+  Future<void> _handleWebViewBackNavigation() async {
+    final controller = _controller;
+    if (controller == null) return;
+    final canGoBack = await controller.canGoBack();
+    if (canGoBack) {
+      await controller.goBack();
+      await _syncNavigatorPopState();
+    } else if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(
-              height: 3,
-              child: AnimatedOpacity(
-                opacity: !_isOffline && _progress < 1 ? 1 : 0,
-                duration: const Duration(milliseconds: 160),
-                child: LinearProgressIndicator(value: _progress.clamp(0, 1)),
+    return PopScope(
+      canPop: _allowNavigatorPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        unawaited(_handleWebViewBackNavigation());
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              if (widget.showAppBar) _InlineAppBar(title: _resolvedTitle),
+              SizedBox(
+                height: 3,
+                child: AnimatedOpacity(
+                  opacity: !_isOffline && _progress < 1 ? 1 : 0,
+                  duration: const Duration(milliseconds: 160),
+                  child: LinearProgressIndicator(value: _progress.clamp(0, 1)),
+                ),
               ),
-            ),
-            Expanded(
-              child: Stack(
-                children: [
-                  InAppWebView(
-                    key: _webViewKey,
-                    initialUrlRequest: URLRequest(url: WebUri(_initialUrl)),
-                    initialSettings: InAppWebViewSettings(
-                      javaScriptEnabled: true,
-                      cacheEnabled: true,
-                      supportZoom: false,
-                      builtInZoomControls: false,
-                      displayZoomControls: false,
-                      allowsBackForwardNavigationGestures: true,
-                      sharedCookiesEnabled: true,
-                    ),
-                    pullToRefreshController: _pullToRefreshController,
-                    onWebViewCreated: (controller) {
-                      _controller = controller;
-                      _registerJavaScriptBridge(controller);
-                    },
-                    onProgressChanged: (controller, progress) {
-                      if (!mounted) return;
-                      setState(() => _progress = progress / 100);
-                      if (progress == 100) {
+              Expanded(
+                child: Stack(
+                  children: [
+                    InAppWebView(
+                      key: _webViewKey,
+                      initialUrlRequest: URLRequest(url: WebUri(_startUrl)),
+                      initialSettings: InAppWebViewSettings(
+                        javaScriptEnabled: true,
+                        cacheEnabled: true,
+                        supportZoom: false,
+                        builtInZoomControls: false,
+                        displayZoomControls: false,
+                        allowsBackForwardNavigationGestures: true,
+                        sharedCookiesEnabled: true,
+                      ),
+                      pullToRefreshController: _pullToRefreshController,
+                      onWebViewCreated: (controller) {
+                        _controller = controller;
+                        _registerJavaScriptBridge(controller);
+                        unawaited(_syncNavigatorPopState());
+                      },
+                      onProgressChanged: (controller, progress) {
+                        if (!mounted) return;
+                        setState(() => _progress = progress / 100);
+                        if (progress == 100) {
+                          _pullToRefreshController.endRefreshing();
+                        }
+                      },
+                      onLoadStop: (controller, url) async {
                         _pullToRefreshController.endRefreshing();
-                      }
-                    },
-                    onLoadStop: (controller, url) async {
-                      _pullToRefreshController.endRefreshing();
-                    },
-                    onLoadError: (controller, url, code, message) {
-                      _pullToRefreshController.endRefreshing();
-                    },
-                  ),
-                  if (_isOffline) _OfflineOverlay(onRetry: _handleRetry),
-                ],
+                        await _syncNavigatorPopState();
+                      },
+                      onLoadError: (controller, url, code, message) {
+                        _pullToRefreshController.endRefreshing();
+                        unawaited(_syncNavigatorPopState());
+                      },
+                    ),
+                    if (_isOffline) _OfflineOverlay(onRetry: _handleRetry),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _InlineAppBar extends StatelessWidget {
+  const _InlineAppBar({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close_rounded),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+      ],
     );
   }
 }
