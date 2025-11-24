@@ -1,16 +1,24 @@
 # 📱 Techmoa (Flutter WebView)
 
-국내 주요 기업과 개발자들의 기술 블로그를 모은 [**Techmoa**](https://github.com/hyjoong/techmoa)의 **WebView 앱**입니다.  
-웹과 동일한 경험을 제공하면서, **앱에서는 북마크를 기기 로컬에 저장**하도록 최적화했습니다.
+국내 주요 기업과 개발자들의 기술 블로그를 모은 [**Techmoa**](https://github.com/hyjoong/techmoa)의 **WebView 앱**입니다.
+
+<div align="center">
+  <img width="600" alt="Techmoa Feature Graphic" src="https://res.cloudinary.com/de1b512h7/image/upload/v1764005023/graph_kxtjr5.png" />
+</div>
 
 ---
 
-## 📸 스크린샷
+## 📸 미리보기
 
 <p align="center">
-  <img src="assets/screenshots/techmoa-home-feed.png" alt="Techmoa 홈 피드 화면" width="240" />
-  <img src="assets/screenshots/techmoa-gallery-view.png" alt="Techmoa 갤러리 화면" width="240" />
-  <img src="assets/screenshots/techmoa-bookmarks.png" alt="Techmoa 북마크 화면" width="240" />
+
+<img src="https://res.cloudinary.com/de1b512h7/image/upload/v1764005000/iphone_1_wdbtxf.png" alt="홈 피드 갤러리뷰" 
+width="240" />
+<img src="https://res.cloudinary.com/de1b512h7/image/upload/v1764004999/iphone_2_byxmxp.png" alt="홈 피드 리스트뷰" 
+width="240" />
+<img src="https://res.cloudinary.com/de1b512h7/image/upload/v1764006524/iphone_3_dgufkt.png" alt="홈 피드 리스트뷰" 
+width="240" />
+
 </p>
 
 ---
